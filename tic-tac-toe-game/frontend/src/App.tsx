@@ -1,6 +1,6 @@
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, animate, motion, useMotionValue, useTransform } from "framer-motion";
 import { Search, X, Circle } from "lucide-react";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { useGameStore } from "./store/gameStore";
@@ -10,11 +10,13 @@ import type { PublicMatchState } from "./lib/sharedTypes";
 type AppView = "home" | "leaderboard" | "create-room" | "join-room";
 
 const NAV_ZOOM_MS = 1260;
-const THEME_EXIT_MS = 640;
-const THEME_TOTAL_MS = 1720;
+
+const CENTER_ANGLE = -90;
+const RIGHT_HIDDEN_ANGLE = 0;
+const LEFT_HIDDEN_ANGLE = -180;
 
 const ORBIT_STARS = Array.from({ length: 12 }).map((_, index) => ({
-  radius: 210 + (index % 4) * 42 + Math.floor(index / 4) * 14,
+  radius: 130 + (index % 4) * 34 + Math.floor(index / 4) * 10,
   duration: 8 + index * 1.25,
   opacity: 0.42 + (index % 5) * 0.08,
   size: 2 + (index % 3),
@@ -29,6 +31,96 @@ const BACKGROUND_STARS = Array.from({ length: 42 }).map((_, index) => ({
   duration: 20 + (index % 6) * 5,
   delay: index * 0.3,
 }));
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+const toRadians = (angle: number) => (angle * Math.PI) / 180;
+const ORBIT_DEBUG = false;
+
+function PlanetBody({ kind, starKeyPrefix }: { kind: "sun" | "planet"; starKeyPrefix: string }) {
+  return (
+    <div className={["planet-body", kind === "sun" ? "planet-body-sun" : "planet-body-planet"].join(" ")}>
+      <div className="planet-core" />
+      <div className="planet-ring">
+        {Array.from({ length: 16 }).map((_, index) => (
+          <span key={`${starKeyPrefix}-particle-${index}`} className="planet-particle" style={{ ["--i" as string]: index } as CSSProperties} />
+        ))}
+      </div>
+      <div className="planet-orbits">
+        {ORBIT_STARS.map((star, index) => (
+          <span
+            key={`${starKeyPrefix}-orbit-${index}`}
+            className="orbit-star"
+            style={
+              {
+                ["--orbit-radius" as string]: `${star.radius}px`,
+                ["--orbit-duration" as string]: `${star.duration}s`,
+                ["--orbit-opacity" as string]: star.opacity,
+                ["--orbit-size" as string]: `${star.size}px`,
+                ["--orbit-delay" as string]: `${star.delay}s`,
+              } as CSSProperties
+            }
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OrbitalBackground({ mode, spaceTransitioning, idPrefix }: { mode: "light" | "dark"; spaceTransitioning: boolean; idPrefix: string }) {
+  const [radius, setRadius] = useState(() => clamp(Math.max(window.innerWidth, window.innerHeight) * 0.58, 420, 920));
+  const sunAngle = useMotionValue(mode === "light" ? CENTER_ANGLE : RIGHT_HIDDEN_ANGLE);
+  const planetAngle = useMotionValue(mode === "light" ? LEFT_HIDDEN_ANGLE : CENTER_ANGLE);
+
+  useEffect(() => {
+    const updateRadius = () => {
+      setRadius(clamp(Math.max(window.innerWidth, window.innerHeight) * 0.58, 420, 920));
+    };
+
+    updateRadius();
+    window.addEventListener("resize", updateRadius);
+    return () => window.removeEventListener("resize", updateRadius);
+  }, []);
+
+  const sunX = useTransform(sunAngle, (angle) => radius * Math.cos(toRadians(angle)));
+  const sunY = useTransform(sunAngle, (angle) => radius + radius * Math.sin(toRadians(angle)));
+  const planetX = useTransform(planetAngle, (angle) => radius * Math.cos(toRadians(angle)));
+  const planetY = useTransform(planetAngle, (angle) => radius + radius * Math.sin(toRadians(angle)));
+
+  useEffect(() => {
+    const transition = {
+      duration: 1.8,
+      ease: [0.42, 0, 0.2, 1] as const,
+    };
+
+    const controls =
+      mode === "dark"
+        ? [
+            animate(sunAngle, [CENTER_ANGLE, RIGHT_HIDDEN_ANGLE], transition),
+            animate(planetAngle, [LEFT_HIDDEN_ANGLE, CENTER_ANGLE], transition),
+          ]
+        : [
+            animate(sunAngle, [RIGHT_HIDDEN_ANGLE, CENTER_ANGLE], transition),
+            animate(planetAngle, [CENTER_ANGLE, LEFT_HIDDEN_ANGLE], transition),
+          ];
+
+    return () => {
+      controls.forEach((control) => control.stop());
+    };
+  }, [mode, planetAngle, sunAngle]);
+
+  return (
+    <div className={["planet-system", spaceTransitioning ? "planet-system-zoom" : ""].join(" ")} aria-hidden="true">
+      <div className={["planet-orbit-stage", ORBIT_DEBUG ? "orbit-debug" : ""].join(" ")}>
+        <motion.div className="orbit-item sun-wrapper" style={{ x: sunX, y: sunY }}>
+          <PlanetBody kind="sun" starKeyPrefix={`${idPrefix}-sun`} />
+        </motion.div>
+        <motion.div className="orbit-item planet-wrapper" style={{ x: planetX, y: planetY }}>
+          <PlanetBody kind="planet" starKeyPrefix={`${idPrefix}-planet`} />
+        </motion.div>
+      </div>
+    </div>
+  );
+}
 
 function getWinLineStyle(line: number[]) {
   const key = line.join("-");
@@ -215,10 +307,6 @@ export default function App() {
   const [view, setView] = useState<AppView>("home");
   const [homeTransitioning, setHomeTransitioning] = useState(false);
   const [spaceTransitioning, setSpaceTransitioning] = useState(false);
-  const [themeTransition, setThemeTransition] = useState<{
-    direction: "to-light" | "to-dark";
-    phase: "exit" | "enter";
-  } | null>(null);
   const previousScreenKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -376,21 +464,7 @@ export default function App() {
   }, [screenKey]);
 
   const handleThemeToggle = () => {
-    if (themeTransition) {
-      return;
-    }
-
-    const direction = mode === "dark" ? "to-light" : "to-dark";
-    setThemeTransition({ direction, phase: "exit" });
-
-    window.setTimeout(() => {
-      toggleTheme();
-      setThemeTransition({ direction, phase: "enter" });
-    }, THEME_EXIT_MS);
-
-    window.setTimeout(() => {
-      setThemeTransition(null);
-    }, THEME_TOTAL_MS);
+    toggleTheme();
   };
   const winnerName =
     matchState?.winner === "draw"
@@ -423,39 +497,10 @@ export default function App() {
       <main
         className={[
           "neon-bg min-h-screen px-4 py-8 sm:px-8",
-          themeTransition ? "theme-transitioning" : "",
-          themeTransition?.direction === "to-light" ? "theme-to-light" : "",
-          themeTransition?.direction === "to-dark" ? "theme-to-dark" : "",
-          themeTransition?.phase === "exit" ? "theme-exit" : "",
-          themeTransition?.phase === "enter" ? "theme-enter" : "",
         ].join(" ")}
       >
         <div className="space-particles" aria-hidden="true" />
-        <div className={["planet-system", spaceTransitioning ? "planet-system-zoom" : ""].join(" ")} aria-hidden="true">
-          <div className="planet-core" />
-          <div className="planet-ring">
-            {Array.from({ length: 16 }).map((_, index) => (
-              <span key={index} className="planet-particle" style={{ ["--i" as string]: index } as CSSProperties} />
-            ))}
-          </div>
-          <div className="planet-orbits">
-            {ORBIT_STARS.map((star, index) => (
-              <span
-                key={`u-orbit-${index}`}
-                className="orbit-star"
-                style={
-                  {
-                    ["--orbit-radius" as string]: `${star.radius}px`,
-                    ["--orbit-duration" as string]: `${star.duration}s`,
-                    ["--orbit-opacity" as string]: star.opacity,
-                    ["--orbit-size" as string]: `${star.size}px`,
-                    ["--orbit-delay" as string]: `${star.delay}s`,
-                  } as CSSProperties
-                }
-              />
-            ))}
-          </div>
-        </div>
+        <OrbitalBackground mode={mode} spaceTransitioning={spaceTransitioning} idPrefix="user" />
         <div className="deep-starfield" aria-hidden="true">
           {BACKGROUND_STARS.map((star, index) => (
             <span
@@ -540,39 +585,10 @@ export default function App() {
     <main
       className={[
         "neon-bg min-h-screen px-4 py-5 sm:px-8",
-        themeTransition ? "theme-transitioning" : "",
-        themeTransition?.direction === "to-light" ? "theme-to-light" : "",
-        themeTransition?.direction === "to-dark" ? "theme-to-dark" : "",
-        themeTransition?.phase === "exit" ? "theme-exit" : "",
-        themeTransition?.phase === "enter" ? "theme-enter" : "",
       ].join(" ")}
     >
       <div className="space-particles" aria-hidden="true" />
-      <div className={["planet-system", spaceTransitioning ? "planet-system-zoom" : ""].join(" ")} aria-hidden="true">
-        <div className="planet-core" />
-        <div className="planet-ring">
-          {Array.from({ length: 16 }).map((_, index) => (
-            <span key={index} className="planet-particle" style={{ ["--i" as string]: index } as CSSProperties} />
-          ))}
-        </div>
-        <div className="planet-orbits">
-          {ORBIT_STARS.map((star, index) => (
-            <span
-              key={`h-orbit-${index}`}
-              className="orbit-star"
-              style={
-                {
-                  ["--orbit-radius" as string]: `${star.radius}px`,
-                  ["--orbit-duration" as string]: `${star.duration}s`,
-                  ["--orbit-opacity" as string]: star.opacity,
-                  ["--orbit-size" as string]: `${star.size}px`,
-                  ["--orbit-delay" as string]: `${star.delay}s`,
-                } as CSSProperties
-              }
-            />
-          ))}
-        </div>
-      </div>
+      <OrbitalBackground mode={mode} spaceTransitioning={spaceTransitioning} idPrefix="home" />
       <div className="deep-starfield" aria-hidden="true">
         {BACKGROUND_STARS.map((star, index) => (
           <span
