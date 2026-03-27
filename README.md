@@ -1,17 +1,23 @@
 ﻿# Multiplayer Tic-Tac-Toe (React + Nakama)
 
+Production-ready multiplayer Tic-Tac-Toe with a server-authoritative Nakama runtime and a React frontend.
+
+## Live Links
+- Latest deployment: https://tic-tac-toe-game.vercel.app/
+- GitHub repository (Jatin): https://github.com/Jatin-cheti/tic-tac-toe-game
+
 ## Project Overview
-Production-oriented multiplayer Tic-Tac-Toe with a server-authoritative Nakama runtime and a React frontend.
-All gameplay outcomes are enforced on the server, and clients only send intents.
+This project uses an authoritative multiplayer model.
+The frontend only sends player intents, and the backend validates every move, turn, and match result.
 
 ## Tech Stack
-- Frontend: React 19, TypeScript, Vite, Zustand, React Query, Tailwind CSS
+- Frontend: React 19, TypeScript, Vite, Zustand, React Query, Tailwind CSS, Framer Motion
 - Backend: Nakama TypeScript runtime module
-- Data: PostgreSQL 15
+- Database: PostgreSQL 15
 - Infra: Docker Compose, GitHub Actions
-- Test: Node-based E2E scripts and Playwright UI tests
+- Testing: Node E2E scripts + Playwright UI tests
 
-## Clean Repository Structure
+## Repository Structure
 The actual app workspace is under `tic-tac-toe-game`:
 
 ```text
@@ -30,67 +36,70 @@ tic-tac-toe-game/
 
 ## Architecture
 ### Frontend
-- UI and app orchestration in `frontend/src/App.tsx`
-- Network/session/game state in `frontend/src/store/gameStore.ts`
-- Nakama client bootstrap in `frontend/src/lib/nakama.ts`
+- App orchestration: `frontend/src/App.tsx`
+- State and networking flow: `frontend/src/store/gameStore.ts`
+- Nakama client bootstrap: `frontend/src/lib/nakama.ts`
 
 ### Backend (Nakama)
-- Match lifecycle entry points in `backend/nakama/src/match/matchHandler.ts`
-- Turn/move/win logic in `backend/nakama/src/match/gameLogic.ts`
-- RPC endpoints in `backend/nakama/src/controllers/rpcController.ts`
-- Persistence/services in `backend/nakama/src/services/`
+- Match lifecycle: `backend/nakama/src/match/matchHandler.ts`
+- Game rules and win logic: `backend/nakama/src/match/gameLogic.ts`
+- RPC endpoints: `backend/nakama/src/controllers/rpcController.ts`
+- Matchmaking/stats/services: `backend/nakama/src/services/`
 
-### Data Flow
+### Authoritative Data Flow
 1. Client authenticates with Nakama.
-2. Client calls RPC for room creation, join, or matchmaking.
-3. Server creates/reuses authoritative match state.
+2. Client calls RPC for create/join/matchmaking.
+3. Server creates or reuses authoritative match state.
 4. Client submits move intents.
-5. Server validates turn and move legality, resolves win/draw/timeouts, persists stats, and broadcasts state.
-6. Frontend renders only authoritative state.
+5. Server validates legality, resolves result, persists stats, and broadcasts state.
+6. Frontend renders server state only.
 
-## Setup Instructions
-1. Clone repository and open the app directory.
+## Quick Start (Local)
+1. Clone and move to project workspace.
 
 ```bash
-git clone <your-repo-url>
-cd tic-tac-toe/tic-tac-toe-game
+git clone https://github.com/Jatin-cheti/tic-tac-toe-game.git
+cd tic-tac-toe-game/tic-tac-toe-game
 ```
 
-2. Install workspace dependencies.
+2. Install dependencies.
 
 ```bash
 npm install --workspaces
 ```
 
-3. Optional: create local `.env` files if you want to override defaults.
-
-4. Build frontend and backend runtime.
+3. Build frontend and backend runtime.
 
 ```bash
 npm run build
 ```
 
-5. Start backend services.
+4. Start backend services.
 
 ```bash
 docker compose up -d
 ```
 
-6. Run frontend.
+5. Start frontend.
 
 ```bash
 npm --workspace frontend run dev
 ```
 
-## Deployment Guide
-- CI validation: `.github/workflows/ci.yml`
-- Container publishing/deploy hooks: `.github/workflows/deploy.yml`
-- Optional secret-gated jobs:
-	- Vercel deploy: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
-	- Backend SSH deploy: `BACKEND_DEPLOY_SSH_HOST`, `BACKEND_DEPLOY_SSH_USER`, `BACKEND_DEPLOY_SSH_KEY`, `BACKEND_DEPLOY_PATH`
+## Deployment and CI
+- CI workflow: `.github/workflows/ci.yml`
+- Deployment workflow: `.github/workflows/deploy.yml`
+- Optional Vercel deployment secrets:
+	- `VERCEL_TOKEN`
+	- `VERCEL_ORG_ID`
+	- `VERCEL_PROJECT_ID`
+- Optional backend SSH deployment secrets:
+	- `BACKEND_DEPLOY_SSH_HOST`
+	- `BACKEND_DEPLOY_SSH_USER`
+	- `BACKEND_DEPLOY_SSH_KEY`
+	- `BACKEND_DEPLOY_PATH`
 
-## API and Server Configuration
-Primary RPC endpoints:
+## Core RPC Endpoints
 - `create_match_room`
 - `join_match_room`
 - `find_match`
@@ -101,7 +110,7 @@ Primary RPC endpoints:
 - `get_leaderboard`
 - `get_match_history`
 
-Common environment variables:
+## Environment Variables
 - `VITE_NAKAMA_HOST`
 - `VITE_NAKAMA_PORT`
 - `VITE_NAKAMA_SSL`
@@ -109,13 +118,13 @@ Common environment variables:
 - `POSTGRES_PASSWORD`
 - `NAKAMA_TEST_MODE`
 
-## Multiplayer Testing Guide
-### Manual
+## Testing
+### Manual Multiplayer Test
 1. Open two browser tabs.
 2. Set usernames in both tabs.
 3. Create room in tab A.
-4. Join room from tab B (or use Play Online in both tabs).
-5. Validate turn sync, invalid move rejection, winner/draw consistency, rematch, and reconnect.
+4. Join from tab B (or press Play Online in both tabs).
+5. Validate move sync, rejection of invalid moves, result consistency, rematch, and reconnect.
 
 ### Automated
 Run from `tic-tac-toe-game`:
@@ -127,7 +136,7 @@ npm run test:e2e
 npm --workspace frontend run test:playwright
 ```
 
-## Features Checklist
+## Feature Checklist
 - [x] Server-authoritative move and turn validation
 - [x] Win/draw detection
 - [x] Turn timer and timeout resolution
@@ -139,5 +148,5 @@ npm --workspace frontend run test:playwright
 
 ## Security Notes
 - Do not commit real secrets.
-- Use environment variables for all sensitive values.
-- Rotate server keys/passwords before production deployment.
+- Use environment variables for sensitive values.
+- Rotate keys/passwords before production deployment.
