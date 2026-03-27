@@ -9,10 +9,10 @@ interface ThemeToggleProps {
 export function ThemeToggle({ theme, onToggle }: ThemeToggleProps) {
   return (
     <motion.button
+      whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      whileHover={{ scale: 1.03 }}
       onClick={onToggle}
-      className="h-10 w-10 rounded-xl border border-border bg-card/70 backdrop-blur-xl flex items-center justify-center"
+      className="rounded-full bg-white/10 p-2.5 text-foreground shadow-lg backdrop-blur-md transition-colors border border-white/20 dark:bg-white/5 dark:border-white/10 hover:bg-white/20 dark:hover:bg-white/10"
       aria-label="Toggle theme"
     >
       {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}

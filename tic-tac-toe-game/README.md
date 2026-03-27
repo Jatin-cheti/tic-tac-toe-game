@@ -2,6 +2,32 @@
 
 Production-ready multiplayer Tic-Tac-Toe with server-authoritative gameplay using Nakama and a React frontend.
 
+## Architecture
+
+- Authoritative backend: all game state mutations happen in Nakama match handlers (`backend/nakama/src/main.ts`)
+- Real-time sync: WebSocket `onmatchdata` state broadcasts only
+- Frontend behavior: client sends intents (`submit_move`, `rematch_request`) and renders server state
+- Shared contracts: message and state types in `shared/src/types.ts`
+
+### Server-Authoritative Match State
+
+The runtime tracks:
+
+- board (9 cells)
+- players (X/O, userId, username, connection state)
+- turn/current player
+- phase (`waiting` | `playing` | `finished`)
+- timer deadline (server tick based)
+- winner and win line
+- move history
+
+### Match Flows
+
+- Matchmaking: `find_match` reuses the oldest waiting room, creates one only when none are valid
+- Private room: `create_match_room` + `join_match_room`
+- Reconnect: client restores `ACTIVE_MATCH_KEY`, rejoins room, and pulls authoritative state
+- Timer: server closes turn on timeout and awards win to opponent
+
 ## Project Structure
 
 - `frontend/`: Vite + React + TypeScript client
@@ -83,6 +109,27 @@ cd frontend
 npm run test:e2e
 ```
 
+The E2E suite validates:
+
+- matchmaking reuses one waiting match for both players
+- room create/join flow starts game
+- turn enforcement and move rejection
+- winner detection and finish state
+- leaderboard and history persistence
+- rematch transition
+- reconnect state recovery
+- persisted usernames (no placeholder names)
+
+## Continuous Test Loop
+
+Use this loop for production hardening:
+
+1. Build backend + frontend.
+2. Start Nakama + Postgres via Docker.
+3. Run scripted E2E (`npm run test:e2e`).
+4. Run manual 2-browser validation (room + matchmaking + reconnect + timeout).
+5. Fix any issue and repeat.
+
 ## Build
 
 ```bash
@@ -100,6 +147,8 @@ npm run build
    - restricted network access
 4. Run Nakama DB migrations before rollout.
 5. Configure CORS/WebSocket access for frontend domain.
+
+`docker-compose.yml` runs only local services on an internal bridge network (`shared_runtime_net`) with no required external Docker network.
 
 ## Security Notes
 

@@ -1,5 +1,7 @@
 import { Client } from "@heroiclabs/nakama-js";
 
+const USERNAME_STORAGE_KEY = "ttt-username";
+
 function getDeviceId(): string {
   const storageKey = "ttt-device-id";
   const existing = localStorage.getItem(storageKey);
@@ -12,16 +14,13 @@ function getDeviceId(): string {
   return generated;
 }
 
-function getUsername(): string {
-  const storageKey = "ttt-username";
-  const existing = localStorage.getItem(storageKey);
-  if (existing) {
-    return existing;
-  }
+export function getStoredUsername(): string | null {
+  const value = String(localStorage.getItem(USERNAME_STORAGE_KEY) || "").trim();
+  return value || null;
+}
 
-  const generated = `Player-${Math.floor(Math.random() * 9000 + 1000)}`;
-  localStorage.setItem(storageKey, generated);
-  return generated;
+export function persistUsername(username: string): void {
+  localStorage.setItem(USERNAME_STORAGE_KEY, username.trim());
 }
 
 export function createNakamaClient() {
@@ -35,6 +34,8 @@ export function createNakamaClient() {
   return {
     client,
     deviceId: getDeviceId(),
-    username: getUsername(),
+    // Nakama requires a username during device auth. If the player has not chosen one yet,
+    // use a deterministic hidden technical value and prompt for a real username in UI.
+    username: getStoredUsername() ?? `u-${getDeviceId().slice(-8)}`,
   };
 }

@@ -9,7 +9,7 @@ import type {
   RpcResponse,
 } from "../lib/sharedTypes";
 import { GAME_OP_CODE } from "../lib/sharedTypes";
-import { createNakamaClient } from "../lib/nakama";
+import { createNakamaClient, getStoredUsername, persistUsername } from "../lib/nakama";
 
 type ConnectionState = "idle" | "connecting" | "connected";
 type QueueState = "none" | "searching";
@@ -30,12 +30,13 @@ interface GameStore {
   errorMessage: string | null;
   ticket: string | null;
   init: () => Promise<void>;
+  setUsername: (username: string) => Promise<void>;
   createRoom: () => Promise<void>;
   joinRoomById: (matchId: string) => Promise<void>;
   findMatch: () => Promise<void>;
   placeMove: (index: number) => Promise<void>;
   rematch: () => Promise<void>;
-  leaveMatch: () => void;
+  leaveMatch: () => Promise<void>;
   clearError: () => void;
   fetchLeaderboard: () => Promise<LeaderboardEntry[]>;
   fetchMatchHistory: () => Promise<MatchHistoryEntry[]>;
@@ -86,6 +87,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     try {
       const { client, deviceId, username } = createNakamaClient();
+      const storedUsername = getStoredUsername();
       const cachedToken = localStorage.getItem(SESSION_TOKEN_KEY);
       const cachedRefresh = localStorage.getItem(SESSION_REFRESH_KEY);
 
@@ -132,10 +134,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
         session,
         socket,
         userId: session.user_id,
-        username,
+        username: storedUsername,
         connectionState: "connected",
         errorMessage: null,
       });
+
+      if (storedUsername) {
+        try {
+          await client.rpc(session, "set_username", { username: storedUsername });
+        } catch (_error) {
+          // Non-fatal: UI keeps local value and next reconnect retries sync.
+        }
+      }
 
       const savedMatchId = localStorage.getItem(ACTIVE_MATCH_KEY);
       if (savedMatchId) {
@@ -156,10 +166,36 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
+  setUsername: async (username: string) => {
+    const { client, session } = get();
+    const sanitized = username.trim().slice(0, 24);
+    if (!sanitized) {
+      throw new Error("Username is required.");
+    }
+
+    persistUsername(sanitized);
+
+    if (!client || !session) {
+      set({ username: sanitized });
+      return;
+    }
+
+    try {
+      await client.rpc(session, "set_username", { username: sanitized });
+      set({ username: sanitized, errorMessage: null });
+    } catch (error) {
+      set({ errorMessage: error instanceof Error ? error.message : "Failed to set username." });
+      throw error;
+    }
+  },
+
   createRoom: async () => {
-    const { client, session, socket } = get();
+    const { client, session, socket, username } = get();
     if (!client || !session || !socket) {
       throw new Error("Not connected.");
+    }
+    if (!username) {
+      throw new Error("Set your username before creating a room.");
     }
 
     try {
@@ -177,9 +213,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   joinRoomById: async (matchId: string) => {
-    const { client, session, socket } = get();
+    const { client, session, socket, username } = get();
     if (!client || !session || !socket) {
       throw new Error("Not connected.");
+    }
+    if (!username) {
+      throw new Error("Set your username before joining a room.");
     }
 
     try {
@@ -197,9 +236,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   findMatch: async () => {
-    const { client, session, socket } = get();
+    const { client, session, socket, username } = get();
     if (!socket || !client || !session) {
       throw new Error("Not connected.");
+    }
+    if (!username) {
+      throw new Error("Set your username before matchmaking.");
     }
 
     try {
@@ -247,7 +289,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  leaveMatch: () => {
+  leaveMatch: async () => {
+    const { socket, activeMatchId } = get();
+    if (socket && activeMatchId) {
+      try {
+        await socket.leaveMatch(activeMatchId);
+      } catch (_error) {
+        // Ignore disconnect race conditions.
+      }
+    }
+
     localStorage.removeItem(ACTIVE_MATCH_KEY);
     set({
       activeMatchId: null,

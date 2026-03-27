@@ -7,6 +7,10 @@
     "backend/nakama",
     "shared"
   ],
+  "overrides": {
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
   "scripts": {
     "install:all": "npm install --workspaces",
     "dev": "npm --workspace frontend run dev",

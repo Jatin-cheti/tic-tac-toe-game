@@ -195,6 +195,24 @@ function resolveDisplayName(nk: nkruntime.Nakama, userId: string, fallback: stri
   return value || fallback;
 }
 
+function resolveUsernameFromAccount(nk: nkruntime.Nakama, userId: string, fallback: string): string {
+  try {
+    const nkAny = nk as unknown as {
+      accountGetId?: (id: string) => { user?: { username?: string } };
+    };
+
+    const account = nkAny.accountGetId ? nkAny.accountGetId(userId) : null;
+    const accountUsername = String(account?.user?.username || "").trim();
+    if (accountUsername) {
+      return accountUsername;
+    }
+  } catch (_error) {
+    // Fall through to profile/sql lookup below.
+  }
+
+  return resolveDisplayName(nk, userId, fallback);
+}
+
 function persistActiveMatch(nk: nkruntime.Nakama, state: MatchState, tick: number): void {
   const xUser = state.players.X ? state.players.X.userId : null;
   const oUser = state.players.O ? state.players.O.userId : null;
@@ -461,7 +479,7 @@ function matchJoin(
   for (let i = 0; i < presences.length; i += 1) {
     const presence = presences[i];
     const existing = findPlayerByUserId(state, presence.userId);
-    const resolvedUsername = resolveDisplayName(nk, presence.userId, presence.username || "player");
+    const resolvedUsername = resolveUsernameFromAccount(nk, presence.userId, presence.username || "player");
     persistProfile(nk, presence.userId, resolvedUsername);
     logger.info("User joined: %q (userId=%q)", resolvedUsername, presence.userId);
 

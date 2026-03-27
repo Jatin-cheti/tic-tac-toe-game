@@ -65,11 +65,33 @@ async function main() {
   logStep("create clients");
   const clientA = new Client(serverKey, host, port, ssl);
   const clientB = new Client(serverKey, host, port, ssl);
+  const clientC = new Client(serverKey, host, port, ssl);
+  const clientD = new Client(serverKey, host, port, ssl);
   const runId = Date.now();
 
   logStep("authenticate + connect sockets");
   const userA = await createUser(clientA, `e2e-a-${runId}`, `E2E_A_${runId}`);
   const userB = await createUser(clientB, `e2e-b-${runId}`, `E2E_B_${runId}`);
+  const userC = await createUser(clientC, `e2e-c-${runId}`, `E2E_C_${runId}`);
+  const userD = await createUser(clientD, `e2e-d-${runId}`, `E2E_D_${runId}`);
+
+  logStep("set persistent usernames");
+  parseRpcPayload((await clientA.rpc(userA.session, "set_username", { username: `Jatin_${runId}` })).payload);
+  parseRpcPayload((await clientB.rpc(userB.session, "set_username", { username: `Mohit_${runId}` })).payload);
+
+  logStep("validate random matchmaking reuses waiting match");
+  const mmA = parseRpcPayload((await clientC.rpc(userC.session, "find_match", {})).payload);
+  const mmB = parseRpcPayload((await clientD.rpc(userD.session, "find_match", {})).payload);
+  assert(mmA.matchId && mmB.matchId, "find_match must return match id");
+  assert(mmA.matchId === mmB.matchId, "find_match should return same waiting match for both players");
+
+  await userC.socket.joinMatch(mmA.matchId);
+  await userD.socket.joinMatch(mmB.matchId);
+  await sleep(400);
+  const mmStateResp = await clientC.rpc(userC.session, "get_match_state", { matchId: mmA.matchId });
+  const mmState = parseRpcPayload(mmStateResp.payload).state;
+  assert(mmState.players.length === 2, "matchmaking room should have exactly two players");
+  assert(mmState.phase === "playing", "matchmaking room should transition to playing");
 
   logStep("create room");
   const created = await clientA.rpc(userA.session, "create_match_room", {});
@@ -122,6 +144,12 @@ async function main() {
   const historyRows = parseRpcPayload(historyA.payload).rows;
   assert(historyRows.length > 0, "match history should include completed game");
 
+  assert(
+    winningState.players.some((p) => p.username.startsWith(`Jatin_${runId}`)) &&
+      winningState.players.some((p) => p.username.startsWith(`Mohit_${runId}`)),
+    "match state must include persisted real usernames",
+  );
+
   logStep("rematch + reconnect");
   parseRpcPayload((await clientA.rpc(userA.session, "rematch_request", { matchId: room.matchId })).payload);
   const rematchResponse = await clientB.rpc(userB.session, "rematch_request", { matchId: room.matchId });
@@ -141,6 +169,8 @@ async function main() {
 
   await userA.socket.disconnect(false);
   await userB.socket.disconnect(false);
+  await userC.socket.disconnect(false);
+  await userD.socket.disconnect(false);
 }
 
 main().catch((error) => {

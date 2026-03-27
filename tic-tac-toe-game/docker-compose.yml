@@ -47,5 +47,4 @@ volumes:
 
 networks:
   shared_runtime_net:
-    external: true
-    name: job-ai-agent_job-agent-network
+    driver: bridge

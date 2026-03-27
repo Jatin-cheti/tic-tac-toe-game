@@ -13,8 +13,8 @@ function MarkGlyph({ value }: { value: "X" | "O" }) {
       <motion.svg
         viewBox="0 0 64 64"
         className="h-9 w-9"
-        initial={{ scale: 0, rotate: -80, filter: "blur(6px)" }}
-        animate={{ scale: 1, rotate: 0, filter: "blur(0px)" }}
+        initial={{ scale: 0, rotate: -80, opacity: 0 }}
+        animate={{ scale: 1, rotate: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 18 }}
       >
         <motion.line
@@ -49,8 +49,8 @@ function MarkGlyph({ value }: { value: "X" | "O" }) {
     <motion.svg
       viewBox="0 0 64 64"
       className="h-9 w-9"
-      initial={{ scale: 0, filter: "blur(6px)" }}
-      animate={{ scale: 1, filter: "blur(0px)" }}
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
       transition={{ type: "spring", stiffness: 260, damping: 18 }}
     >
       <motion.circle
@@ -80,8 +80,8 @@ export function Board({ state, userId, onMove }: BoardProps) {
       transition={{ duration: 0.4 }}
       className="relative"
     >
-      <div className="absolute -inset-8 rounded-[2rem] bg-[radial-gradient(circle_at_center,rgba(0,186,164,0.12),transparent_60%)] blur-2xl" />
-      <div className="relative grid w-[258px] grid-cols-3 gap-2 rounded-2xl border border-border/70 bg-card/75 p-3 backdrop-blur-xl sm:w-[288px]">
+      <div className="absolute -inset-8 rounded-[2rem] bg-[radial-gradient(circle_at_center,rgba(0,186,164,0.12),transparent_60%)] blur-lg" />
+      <div className="relative grid w-[258px] grid-cols-3 gap-2 rounded-2xl border border-border/70 bg-card/75 p-3 backdrop-blur-sm sm:w-[288px]">
         {state.board.map((cell, index) => {
           const isWin = state.winLine.includes(index);
           const disabled = !isMyTurn || !!cell || state.phase !== "playing";

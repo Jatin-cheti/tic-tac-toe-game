@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 5174",
+    "dev": "vite --port 5174 --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "preview": "vite preview --port 5174",
     "test:e2e": "node ./scripts/e2e-multiplayer.mjs"
@@ -14,15 +14,19 @@
     "@tanstack/react-query": "^5.83.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.554.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "ws": "^8.18.0",
     "zustand": "^5.0.8"
   },
+  "overrides": {
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
   "devDependencies": {
     "@ljharb/tsconfig": "^0.3.2",
-    "@types/react": "^18.3.23",
-    "@types/react-dom": "^18.3.7",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
