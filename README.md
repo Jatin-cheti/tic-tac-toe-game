@@ -3,7 +3,7 @@
 Production-ready multiplayer Tic-Tac-Toe with a server-authoritative Nakama runtime and a React frontend.
 
 ## Live Links
-- Latest deployment: https://tic-tac-toe-game.vercel.app/
+- Latest deployment: https://frontend-one-chi-31.vercel.app/
 - GitHub repository (Jatin): https://github.com/Jatin-cheti/tic-tac-toe-game
 
 ## Project Overview
