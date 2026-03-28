@@ -88,7 +88,7 @@ function OrbitalBackground({ mode, spaceTransitioning, idPrefix }: { mode: "ligh
 
   useEffect(() => {
     const transition = {
-      duration: 1.8,
+      duration: 2.2,
       ease: [0.42, 0, 0.2, 1] as const,
     };
 
