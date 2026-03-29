@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, animate, motion, useMotionValue, useTransform } from "framer-motion";
 import { Search, X, Circle } from "lucide-react";
@@ -309,6 +309,21 @@ export default function App() {
   const [spaceTransitioning, setSpaceTransitioning] = useState(false);
   const previousScreenKeyRef = useRef<string | null>(null);
 
+  const handleUsernameSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const next = usernameInput.trim();
+    if (!next || spaceTransitioning) {
+      return;
+    }
+
+    setSpaceTransitioning(true);
+    window.setTimeout(() => {
+      void setUsername(next).finally(() => {
+        window.setTimeout(() => setSpaceTransitioning(false), 420);
+      });
+    }, 920);
+  };
+
   useEffect(() => {
     void init();
   }, [init]);
@@ -544,31 +559,27 @@ export default function App() {
 
               <form
                 className="space-y-4"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const next = usernameInput.trim();
-                  if (!next || spaceTransitioning) {
-                    return;
-                  }
-
-                  setSpaceTransitioning(true);
-                  window.setTimeout(() => {
-                    void setUsername(next).finally(() => {
-                      window.setTimeout(() => setSpaceTransitioning(false), 420);
-                    });
-                  }, 920);
-                }}
+                onSubmit={handleUsernameSubmit}
               >
                 <input
+                  type="text"
                   value={usernameInput}
                   onChange={(event) => setUsernameInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                      event.preventDefault();
+                      event.currentTarget.form?.requestSubmit();
+                    }
+                  }}
+                  autoComplete="nickname"
+                  enterKeyHint="done"
                   placeholder="Enter username"
                   maxLength={24}
                   className="h-12 w-full rounded-2xl border border-white/15 bg-white/5 px-4 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/70"
                 />
                 <button
                   type="submit"
-                  disabled={connectionState !== "connected" || spaceTransitioning}
+                  disabled={!usernameInput.trim() || spaceTransitioning}
                   className="h-12 w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-sm font-black text-black transition-transform hover:scale-[1.01] disabled:opacity-60"
                 >
                   Continue To Home
