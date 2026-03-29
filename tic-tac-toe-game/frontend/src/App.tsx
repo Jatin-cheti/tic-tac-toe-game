@@ -70,6 +70,7 @@ function OrbitalBackground({ mode, spaceTransitioning, idPrefix }: { mode: "ligh
   const [radius, setRadius] = useState(() => clamp(Math.max(window.innerWidth, window.innerHeight) * 0.58, 420, 920));
   const sunAngle = useMotionValue(mode === "light" ? CENTER_ANGLE : RIGHT_HIDDEN_ANGLE);
   const planetAngle = useMotionValue(mode === "light" ? LEFT_HIDDEN_ANGLE : CENTER_ANGLE);
+  const skyProgress = useMotionValue(mode === "light" ? 1 : 0);
 
   useEffect(() => {
     const updateRadius = () => {
@@ -85,6 +86,12 @@ function OrbitalBackground({ mode, spaceTransitioning, idPrefix }: { mode: "ligh
   const sunY = useTransform(sunAngle, (angle) => radius + radius * Math.sin(toRadians(angle)));
   const planetX = useTransform(planetAngle, (angle) => radius * Math.cos(toRadians(angle)));
   const planetY = useTransform(planetAngle, (angle) => radius + radius * Math.sin(toRadians(angle)));
+  const skyLightX = useTransform(sunX, (x) => x * 0.14);
+  const skyLightY = useTransform(sunY, (y) => (y - radius) * 0.18);
+  const skyDarkX = useTransform(planetX, (x) => x * 0.14);
+  const skyDarkY = useTransform(planetY, (y) => (y - radius) * 0.18);
+  const skyLightOpacity = useTransform(skyProgress, [0, 1], [0, 1]);
+  const skyDarkOpacity = useTransform(skyProgress, [0, 1], [1, 0]);
 
   useEffect(() => {
     const transition = {
@@ -97,19 +104,25 @@ function OrbitalBackground({ mode, spaceTransitioning, idPrefix }: { mode: "ligh
         ? [
             animate(sunAngle, [CENTER_ANGLE, RIGHT_HIDDEN_ANGLE], transition),
             animate(planetAngle, [LEFT_HIDDEN_ANGLE, CENTER_ANGLE], transition),
+            animate(skyProgress, 0, transition),
           ]
         : [
             animate(sunAngle, [RIGHT_HIDDEN_ANGLE, CENTER_ANGLE], transition),
             animate(planetAngle, [CENTER_ANGLE, LEFT_HIDDEN_ANGLE], transition),
+            animate(skyProgress, 1, transition),
           ];
 
     return () => {
       controls.forEach((control) => control.stop());
     };
-  }, [mode, planetAngle, sunAngle]);
+  }, [mode, planetAngle, skyProgress, sunAngle]);
 
   return (
     <div className={["planet-system", spaceTransitioning ? "planet-system-zoom" : ""].join(" ")} aria-hidden="true">
+      <motion.div className="planet-sky-transition">
+        <motion.div className="planet-sky-layer planet-sky-dark" style={{ x: skyDarkX, y: skyDarkY, opacity: skyDarkOpacity }} />
+        <motion.div className="planet-sky-layer planet-sky-light" style={{ x: skyLightX, y: skyLightY, opacity: skyLightOpacity }} />
+      </motion.div>
       <div className={["planet-orbit-stage", ORBIT_DEBUG ? "orbit-debug" : ""].join(" ")}>
         <motion.div className="orbit-item sun-wrapper" style={{ x: sunX, y: sunY }}>
           <PlanetBody kind="sun" starKeyPrefix={`${idPrefix}-sun`} />

@@ -117,6 +117,36 @@ html.e2e-test-mode .planet-system {
     inset: 0;
     width: 100%;
     height: 100%;
+    z-index: 2;
+  }
+
+  .planet-sky-transition {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .planet-sky-layer {
+    position: absolute;
+    inset: -35%;
+    background-repeat: no-repeat;
+    background-size: 100vw 100vh;
+    will-change: transform, opacity;
+  }
+
+  .planet-sky-dark {
+    background:
+      radial-gradient(ellipse at 16% 0%, rgba(95, 113, 255, 0.24), transparent 56%),
+      radial-gradient(circle at 84% 84%, rgba(0, 202, 255, 0.22), transparent 44%),
+      linear-gradient(160deg, #1d2f85 0%, #1d286f 40%, #1b2d73 68%, #16265f 100%);
+  }
+
+  .planet-sky-light {
+    background:
+      radial-gradient(circle at 20% 18%, rgba(255, 251, 226, 0.36), transparent 42%),
+      linear-gradient(170deg, #c9e7ff 0%, #c3e2ff 52%, #bcdfff 100%);
   }
 
   .orbit-item {
