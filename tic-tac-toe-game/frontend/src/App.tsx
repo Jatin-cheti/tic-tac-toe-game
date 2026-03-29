@@ -320,20 +320,25 @@ export default function App() {
   const [view, setView] = useState<AppView>("home");
   const [homeTransitioning, setHomeTransitioning] = useState(false);
   const [spaceTransitioning, setSpaceTransitioning] = useState(false);
+  const [usernameSubmitting, setUsernameSubmitting] = useState(false);
   const previousScreenKeyRef = useRef<string | null>(null);
 
   const submitUsername = async () => {
     const next = usernameInput.trim();
-    if (!next || spaceTransitioning) {
+    if (!next || spaceTransitioning || usernameSubmitting) {
       return;
     }
 
+    setUsernameSubmitting(true);
     setSpaceTransitioning(true);
-    window.setTimeout(() => {
-      void setUsername(next).finally(() => {
-        window.setTimeout(() => setSpaceTransitioning(false), 420);
-      });
-    }, 920);
+    try {
+      await setUsername(next);
+    } finally {
+      window.setTimeout(() => {
+        setUsernameSubmitting(false);
+        setSpaceTransitioning(false);
+      }, 220);
+    }
   };
 
   const handleUsernameSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -597,7 +602,10 @@ export default function App() {
                 {errorMessage ? <p className="text-xs text-pink-200">{errorMessage}</p> : null}
                 <button
                   type="submit"
-                  disabled={!usernameInput.trim() || spaceTransitioning}
+                  onClick={() => {
+                    void submitUsername();
+                  }}
+                  disabled={!usernameInput.trim() || spaceTransitioning || usernameSubmitting}
                   className="h-12 w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-sm font-black text-black transition-transform hover:scale-[1.01] disabled:opacity-60"
                 >
                   Continue To Home
@@ -739,36 +747,40 @@ export default function App() {
 
                 <div className="mt-8 flex flex-col gap-3.5">
                   <motion.button
+                    type="button"
                     whileHover={{ y: -2, scale: 1.02 }}
                     whileTap={{ scale: 0.985, y: 0, scaleY: 0.92 }}
-                    onClick={() => runHomeTransition(() => void findMatch())}
+                    onPointerUp={() => runHomeTransition(() => void findMatch())}
                     className="home-action-btn home-action-primary"
                   >
                     Play Online
                   </motion.button>
 
                   <motion.button
+                    type="button"
                     whileHover={{ y: -2, scale: 1.02 }}
                     whileTap={{ scale: 0.985, y: 0, scaleY: 0.92 }}
-                    onClick={() => runHomeTransition(() => setView("create-room"))}
+                    onPointerUp={() => runHomeTransition(() => setView("create-room"))}
                     className="home-action-btn home-action-secondary"
                   >
                     Create Room
                   </motion.button>
 
                   <motion.button
+                    type="button"
                     whileHover={{ y: -2, scale: 1.02 }}
                     whileTap={{ scale: 0.985, y: 0, scaleY: 0.92 }}
-                    onClick={() => runHomeTransition(() => setView("join-room"))}
+                    onPointerUp={() => runHomeTransition(() => setView("join-room"))}
                     className="home-action-btn home-action-tertiary"
                   >
                     Join Room
                   </motion.button>
 
                   <motion.button
+                    type="button"
                     whileHover={{ y: -2, scale: 1.02 }}
                     whileTap={{ scale: 0.985, y: 0, scaleY: 0.92 }}
-                    onClick={() => runHomeTransition(() => setView("leaderboard"))}
+                    onPointerUp={() => runHomeTransition(() => setView("leaderboard"))}
                     className="home-action-btn home-action-outline"
                   >
                     Leaderboard

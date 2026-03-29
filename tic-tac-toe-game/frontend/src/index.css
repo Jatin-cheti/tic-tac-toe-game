@@ -318,6 +318,9 @@ html.e2e-test-mode .planet-system {
     animation: orbit-satellite var(--orbit-duration) linear infinite;
     animation-delay: var(--orbit-delay);
     will-change: transform, opacity;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    background-clip: padding-box;
   }
 
   .orbit-debug .orbit-item {
@@ -372,6 +375,28 @@ html.e2e-test-mode .planet-system {
     transform: rotate(calc(var(--i) * 22.5deg)) translateX(calc(var(--planet-ring-size) * 0.5));
     animation: particle-pulse 2.4s ease-in-out infinite;
     animation-delay: calc(var(--i) * 0.12s);
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+  }
+
+  @media (max-width: 640px), (pointer: coarse) {
+    .orbit-star,
+    .planet-particle {
+      border-radius: 50% !important;
+      box-shadow: 0 0 4px rgba(255, 255, 255, 0.45);
+      filter: none;
+    }
+
+    .planet-body-sun .orbit-star {
+      width: calc(var(--orbit-size) * 1.5);
+      height: calc(var(--orbit-size) * 1.5);
+      box-shadow: 0 0 6px rgba(255, 245, 210, 0.42);
+    }
+
+    .planet-particle {
+      width: 4px;
+      height: 4px;
+    }
   }
 
   .light .neon-bg {
@@ -515,6 +540,14 @@ html.e2e-test-mode .planet-system {
     .player-card,
     .leader-row {
       transform: none;
+    }
+
+    .home-hub-card {
+      animation: none;
+    }
+
+    .home-action-btn {
+      touch-action: manipulation;
     }
   }
 

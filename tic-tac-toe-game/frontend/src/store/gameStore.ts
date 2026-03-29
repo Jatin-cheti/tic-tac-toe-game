@@ -325,9 +325,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   findMatch: async () => {
-    const { client, session, socket, username } = get();
+    let { client, session, socket, username } = get();
     if (!socket || !client || !session) {
-      throw new Error("Not connected.");
+      await get().init();
+      ({ client, session, socket, username } = get());
+    }
+    if (!socket || !client || !session) {
+      throw new Error("Still connecting. Please try again.");
     }
     if (!username) {
       throw new Error("Set your username before matchmaking.");
