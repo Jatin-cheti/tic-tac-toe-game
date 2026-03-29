@@ -309,8 +309,7 @@ export default function App() {
   const [spaceTransitioning, setSpaceTransitioning] = useState(false);
   const previousScreenKeyRef = useRef<string | null>(null);
 
-  const handleUsernameSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitUsername = async () => {
     const next = usernameInput.trim();
     if (!next || spaceTransitioning) {
       return;
@@ -322,6 +321,11 @@ export default function App() {
         window.setTimeout(() => setSpaceTransitioning(false), 420);
       });
     }, 920);
+  };
+
+  const handleUsernameSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void submitUsername();
   };
 
   useEffect(() => {
@@ -566,9 +570,9 @@ export default function App() {
                   value={usernameInput}
                   onChange={(event) => setUsernameInput(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                    if ((event.key === "Enter" || event.key === "Go" || event.key === "Done") && !event.nativeEvent.isComposing) {
                       event.preventDefault();
-                      event.currentTarget.form?.requestSubmit();
+                      void submitUsername();
                     }
                   }}
                   autoComplete="nickname"
@@ -577,6 +581,7 @@ export default function App() {
                   maxLength={24}
                   className="h-12 w-full rounded-2xl border border-white/15 bg-white/5 px-4 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/70"
                 />
+                {errorMessage ? <p className="text-xs text-pink-200">{errorMessage}</p> : null}
                 <button
                   type="submit"
                   disabled={!usernameInput.trim() || spaceTransitioning}

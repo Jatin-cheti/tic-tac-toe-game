@@ -270,8 +270,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       await client.rpc(session, "set_username", { username: sanitized });
       set({ username: sanitized, errorMessage: null });
     } catch (error) {
-      set({ errorMessage: error instanceof Error ? error.message : "Failed to set username." });
-      throw error;
+      // Keep local username so the app can proceed even if server sync is temporarily unavailable.
+      set({
+        username: sanitized,
+        errorMessage: error instanceof Error ? error.message : "Failed to sync username to server.",
+      });
     }
   },
 
